@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breison's Trading Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #08080b;
+  --surface:  #0f0f14;
+  --surface2: #161620;
+  --border:   #1e1e2a;
+  --accent:   #c4b5fd;
+  --accent-dim: rgba(196,181,253,0.1);
+  --accent-mid: rgba(196,181,253,0.18);
+  --text:     #ede9ff;
+  --muted:    #6b6880;
+  --muted2:   #3d3a50;
+  --green:    #a3e4b4;
+  --green-dim:rgba(163,228,180,0.12);
+  --blue:     #a5c8fa;
+  --blue-dim: rgba(165,200,250,0.12);
+  --yellow:   #f5d08a;
+  --yellow-dim:rgba(245,208,138,0.12);
+  --red:      #f4a0a0;
+  --red-dim:  rgba(244,160,160,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-size:14px;overflow-x:hidden}
+
+/* ── TOP BAR ── */
+.topbar {
+  position:fixed;top:0;left:0;right:0;height:56px;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;z-index:100;
+}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px}
+.hamburger span{display:block;width:22px;height:2px;background:var(--muted);border-radius:2px;transition:all .25s}
+.hamburger:hover span{background:var(--accent)}
+.topbar-title{font-size:14px;font-weight:700;letter-spacing:-.2px;color:var(--text)}
+.topbar-title em{color:var(--accent);font-style:normal}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.settings-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s}
+.settings-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── SIDEBAR OVERLAY ── */
+.sidebar-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;
+  opacity:0;transition:opacity .25s;
+}
+.sidebar-backdrop.open{display:block;opacity:1}
+
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;width:260px;
+  background:var(--surface);border-right:1px solid var(--border);
+  z-index:160;
+  transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+}
+.sidebar.open{transform:translateX(0)}
+.sidebar-header{
+  height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.sidebar-brand{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+.sidebar-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px}
+.sidebar-close:hover{color:var(--text)}
+.sidebar-nav{padding:16px 12px;flex:1}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;border-radius:8px;
+  background:none;border:none;color:var(--muted);
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;width:100%;text-align:left;
+  transition:all .15s;margin-bottom:2px;
+}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent)}
+.nav-item-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-divider{height:1px;background:var(--border);margin:10px 4px}
+.sidebar-footer{padding:16px 12px;border-top:1px solid var(--border)}
+.sidebar-version{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);padding:0 14px}
+
+/* ── MAIN ── */
+.main{margin-top:56px;padding:36px 40px;max-width:1200px;margin-left:auto;margin-right:auto}
+.page{display:none}
+.page.active{display:block}
+
+/* ── DASHBOARD ── */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:44px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 20px}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:400;line-height:1;color:var(--text)}
+.stat-num.hi{color:var(--accent)}
+.stat-foot{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:8px}
+.bar-track{height:2px;background:var(--surface2);border-radius:2px;margin-top:12px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .6s ease}
+
+/* ── SECTION ── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.sec-title{font-size:15px;font-weight:700}
+.sec-sub{font-size:11px;color:var(--muted);margin-left:8px;font-family:'JetBrains Mono',monospace}
+.divider{height:1px;background:var(--border);margin:32px 0}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;cursor:pointer;border:none;transition:all .15s}
+.btn-accent{background:var(--accent);color:#0a0a0f}
+.btn-accent:hover{background:#d4c6ff}
+.btn-ghost{background:none;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted2)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(244,160,160,.2)}
+.btn-danger:hover{background:rgba(244,160,160,.2)}
+.btn-sm{padding:6px 13px;font-size:11px}
+.btn-xs{padding:4px 10px;font-size:11px}
+.back-btn{background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:22px;padding:0}
+.back-btn:hover{color:var(--text)}
+
+/* ── PLAYLIST GRID ── */
+.pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:36px}
+.pl-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;cursor:pointer;transition:all .15s}
+.pl-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.pl-card-name{font-size:14px;font-weight:700;margin-bottom:5px}
+.pl-card-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.pl-card-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);text-decoration:none;margin-top:12px;font-family:'JetBrains Mono',monospace}
+.pl-card-link:hover{text-decoration:underline}
+
+/* ── EDIT PANEL ── */
+.edit-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.edit-row{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border)}
+.edit-row:last-child{border-bottom:none}
+.edit-row-name{font-size:13px;font-weight:600}
+.edit-row-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.edit-row-actions{display:flex;gap:8px;flex-shrink:0}
+
+/* ── DETAIL ── */
+.detail-head{margin-bottom:26px}
+.detail-title{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.detail-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);text-decoration:none;margin-top:6px;font-family:'JetBrains Mono',monospace}
+.detail-link:hover{text-decoration:underline}
+
+/* ── TABLE ── */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:11px 14px;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(196,181,253,.03)}
+.td-mono{font-family:'JetBrains Mono',monospace;font-size:11px}
+.td-link{color:var(--accent);text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:11px}
+.td-link:hover{text-decoration:underline}
+.td-actions{display:flex;gap:6px}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.b-ns{background:rgba(107,104,128,.15);color:var(--muted)}
+.b-ip{background:var(--blue-dim);color:var(--blue)}
+.b-rv{background:var(--yellow-dim);color:var(--yellow)}
+.b-done{background:var(--green-dim);color:var(--green)}
+
+/* ── MINI TABS ── */
+.mini-tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:3px;width:fit-content;margin-bottom:18px}
+.mt-btn{background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:7px 16px;border-radius:5px;cursor:pointer;transition:all .15s}
+.mt-btn.active{background:var(--surface2);color:var(--text)}
+.mt-pane{display:none}
+.mt-pane.active{display:block}
+
+/* ── GROUPED ── */
+.pl-group{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.pl-group-head{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;cursor:pointer;user-select:none;background:var(--surface2)}
+.pl-group-head:hover{background:var(--border)}
+.pl-group-name{font-size:13px;font-weight:700}
+.pl-group-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.pl-group-chevron{color:var(--muted);font-size:14px;transition:transform .2s}
+.pl-group.open .pl-group-chevron{transform:rotate(180deg)}
+.pl-group-body{display:none}
+.pl-group.open .pl-group-body{display:block}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty p{font-size:13px;margin-top:6px}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:22px}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.fg label .req{color:var(--accent)}
+input[type=text],input[type=url],input[type=number],select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;transition:border-color .15s;-webkit-appearance:none;appearance:none}
+input:focus,select:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted2)}
+select{cursor:pointer}
+select option{background:var(--surface)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+
+/* ── SETTINGS PAGE ── */
+.settings-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:12px;color:var(--muted)}
+.settings-empty .s-icon{font-size:36px;opacity:.3}
+.settings-empty p{font-size:13px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:8px;padding:11px 18px;font-size:12px;z-index:400;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none;font-family:'JetBrains Mono',monospace;color:var(--accent)}
+.toast.show{opacity:1;transform:translateY(0)}
+
+@media(max-width:800px){
+  .main{padding:20px}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="topbar-title">Breison's <em>Trading Journal</em></div>
+  </div>
+  <div class="topbar-right">
+    <button class="settings-btn" onclick="gotoTab('settings')" title="Settings">⚙</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar-backdrop" id="backdrop" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-brand">Navigation</span>
+    <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+  </div>
+  <nav class="sidebar-nav">
+    <button class="nav-item active" id="nav-dash" onclick="gotoTab('dash')">
+      <span class="nav-item-icon">◈</span> Dashboard
+    </button>
+    <button class="nav-item" id="nav-playlists" onclick="gotoTab('playlists')">
+      <span class="nav-item-icon">◧</span> Playlists
+    </button>
+    <button class="nav-item" id="nav-datasheet" onclick="gotoTab('datasheet')">
+      <span class="nav-item-icon">▤</span> Data Sheet
+    </button>
+    <div class="nav-divider"></div>
+    <button class="nav-item" id="nav-settings" onclick="gotoTab('settings')">
+      <span class="nav-item-icon">◎</span> Settings
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-version">BTJ v1</div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div id="page-dash" class="page active">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Lessons</div>
+        <div class="stat-num" id="s-lessons">0</div>
+        <div class="stat-foot" id="s-playlists">0 playlists</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Notes Progress</div>
+        <div class="stat-num hi" id="s-pct">0%</div>
+        <div class="bar-track"><div class="bar-fill" id="s-bar" style="width:0%"></div></div>
+        <div class="stat-foot" id="s-pct-foot">0 of 0 completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Rewatches</div>
+        <div class="stat-num" id="s-rw">0</div>
+        <div class="stat-foot" id="s-rw-foot">0 lessons rewatched</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Time Spent</div>
+        <div class="stat-num" id="s-time">0m</div>
+        <div class="stat-foot" id="s-time-foot">inc. rewatches</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYLISTS -->
+  <div id="page-playlists" class="page">
+    <div id="pls-list">
+      <div class="sec-header">
+        <div style="display:flex;align-items:center">
+          <span class="sec-title">Playlists</span>
+          <span class="sec-sub" id="pl-count-label"></span>
+        </div>
+        <button class="btn btn-accent" onclick="openModal('m-create-pl')">+ New Playlist</button>
+      </div>
+      <div class="pl-grid" id="pl-grid"></div>
+      <div class="divider"></div>
+      <div class="sec-header" style="margin-bottom:14px">
+        <span class="sec-title">Edit Playlists</span>
+      </div>
+      <div class="edit-panel" id="edit-panel"></div>
+    </div>
+
+    <div id="pls-detail" style="display:none">
+      <button class="back-btn" onclick="backToList()">← Back to Playlists</button>
+      <div class="detail-head">
+        <div class="detail-title" id="d-title"></div>
+        <a href="#" id="d-link" target="_blank" class="detail-link">View full playlist →</a>
+      </div>
+      <div class="sec-header">
+        <span class="sec-title" style="font-size:13px;color:var(--muted)">Lessons</span>
+        <button class="btn btn-accent btn-sm" onclick="openAddLesson()">+ Add Lesson</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Lesson Name</th><th>Length</th><th>Rewatches</th><th>Total Time</th><th>Notes Status</th><th>Video</th><th>Notes</th><th></th>
+          </tr></thead>
+          <tbody id="lessons-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA SHEET -->
+  <div id="page-datasheet" class="page">
+    <div class="sec-header" style="margin-bottom:18px">
+      <span class="sec-title">Data Sheet</span>
+    </div>
+    <div class="mini-tabs">
+      <button class="mt-btn active" onclick="switchMini('flat')">All Lessons</button>
+      <button class="mt-btn" onclick="switchMini('grouped')">By Playlist</button>
+    </div>
+    <div id="mt-flat" class="mt-pane active">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Lesson</th><th>Playlist</th><th>Length</th><th>Rewatches</th><th>Total Time</th><th>Notes Status</th><th>Video</th><th>Notes</th>
+          </tr></thead>
+          <tbody id="flat-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="mt-grouped" class="mt-pane">
+      <div id="grouped-body"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="page-settings" class="page">
+    <div class="sec-header" style="margin-bottom:32px">
+      <span class="sec-title">Settings</span>
+    </div>
+    <div class="settings-empty">
+      <div class="s-icon">⚙</div>
+      <p>Settings coming soon.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODALS -->
+
+<div class="overlay" id="m-create-pl">
+  <div class="modal">
+    <div class="modal-title">New Playlist</div>
+    <div class="fg"><label>Playlist Name <span class="req">*</span></label><input type="text" id="f-pl-name" placeholder="e.g. ICT Core Content"></div>
+    <div class="fg"><label>Playlist Link <span class="req">*</span></label><input type="url" id="f-pl-link" placeholder="https://..."></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-create-pl')">Cancel</button>
+      <button class="btn btn-accent" onclick="createPlaylist()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-edit-pl">
+  <div class="modal">
+    <div class="modal-title">Edit Playlist</div>
+    <input type="hidden" id="f-epl-id">
+    <div class="fg"><label>Playlist Name <span class="req">*</span></label><input type="text" id="f-epl-name"></div>
+    <div class="fg"><label>Playlist Link <span class="req">*</span></label><input type="url" id="f-epl-link"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-edit-pl')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveEditPlaylist()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-lesson">
+  <div class="modal">
+    <div class="modal-title" id="m-lesson-title">Add Lesson</div>
+    <input type="hidden" id="f-l-id">
+    <div class="fg"><label>Lesson Name <span class="req">*</span></label><input type="text" id="f-l-name" placeholder="e.g. Market Structure"></div>
+    <div class="fg"><label>Video Length (minutes) <span class="req">*</span></label><input type="number" id="f-l-len" placeholder="e.g. 45" min="0" step="0.5"></div>
+    <div class="fg"><label>Video Link <span class="req">*</span></label><input type="url" id="f-l-vlink" placeholder="https://..."></div>
+    <div class="fg"><label>Rewatches</label><input type="number" id="f-l-rw" placeholder="0" min="0"></div>
+    <div class="fg"><label>Notes Status</label>
+      <select id="f-l-status">
+        <option value="not-started">Not Started</option>
+        <option value="in-progress">In Progress</option>
+        <option value="reviewing">Reviewing</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div class="fg"><label>Notes Link</label><input type="url" id="f-l-nlink" placeholder="https://..."></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-lesson')">Cancel</button>
+      <button class="btn btn-accent" id="m-lesson-save" onclick="saveLesson()">Add Lesson</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────
+const SB_URL = 'https://mctiectixnbliqpxtleb.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1jdGllY3RpeG5ibGlxcHh0bGViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MTM4NDIsImV4cCI6MjA5NTM4OTg0Mn0.jidpPozmPTnd-38nGXIztwmC_Op6tC1UVyTgV_B3Wto';
+const HEADERS = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
+
+// ── STATE ──────────────────────────────────────────────
+let data = [];
+let activePlId = null;
+let recordId = null; // the row id in supabase
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+async function save() {
+  const payload = JSON.stringify(data);
+  if (recordId) {
+    // update existing row
+    await fetch(`${SB_URL}/rest/v1/note_tracker?id=eq.${recordId}`, {
+      method: 'PATCH',
+      headers: HEADERS,
+      body: JSON.stringify({ data: payload })
+    });
+  } else {
+    // insert first row
+    const res = await fetch(`${SB_URL}/rest/v1/note_tracker`, {
+      method: 'POST',
+      headers: { ...HEADERS, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ data: payload })
+    });
+    const rows = await res.json();
+    if (rows && rows[0]) recordId = rows[0].id;
+  }
+}
+
+async function loadFromCloud() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/note_tracker?select=*&limit=1`, { headers: HEADERS });
+    const rows = await res.json();
+    if (rows && rows.length > 0) {
+      recordId = rows[0].id;
+      data = JSON.parse(rows[0].data || '[]');
+    }
+  } catch(e) {
+    console.error('Failed to load from cloud:', e);
+    toast('Could not connect to cloud — check your connection');
+  }
+}
+
+// ── SIDEBAR ────────────────────────────────────────────
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const b = document.getElementById('backdrop');
+  const open = s.classList.contains('open');
+  if (open) { s.classList.remove('open'); b.classList.remove('open'); }
+  else { s.classList.add('open'); b.classList.add('open'); }
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('open');
+}
+
+// ── TABS ───────────────────────────────────────────────
+function gotoTab(t) {
+  ['dash','playlists','datasheet','settings'].forEach(id => {
+    document.getElementById('nav-' + id)?.classList.toggle('active', id === t);
+    document.getElementById('page-' + id)?.classList.toggle('active', id === t);
+  });
+  closeSidebar();
+  if (t === 'dash') renderDash();
+  if (t === 'playlists') renderPls();
+  if (t === 'datasheet') renderDataSheet();
+}
+
+// ── DASHBOARD ──────────────────────────────────────────
+function renderDash() {
+  const all = data.flatMap(p => p.lessons || []);
+  const total = all.length, plCount = data.length;
+  const rw = all.reduce((s,l) => s + (l.rw||0), 0);
+  const rwCount = all.filter(l => (l.rw||0) > 0).length;
+  const done = all.filter(l => l.status === 'completed').length;
+  const pct = total > 0 ? Math.round(done/total*100) : 0;
+  const mins = all.reduce((s,l) => s + (parseFloat(l.len)||0) * (1 + (l.rw||0)), 0);
+  document.getElementById('s-lessons').textContent = total;
+  document.getElementById('s-playlists').textContent = plCount + ' playlist' + (plCount!==1?'s':'');
+  document.getElementById('s-pct').textContent = pct + '%';
+  document.getElementById('s-bar').style.width = pct + '%';
+  document.getElementById('s-pct-foot').textContent = done + ' of ' + total + ' completed';
+  document.getElementById('s-rw').textContent = rw;
+  document.getElementById('s-rw-foot').textContent = rwCount + ' lesson' + (rwCount!==1?'s':'') + ' rewatched';
+  document.getElementById('s-time').textContent = fmtTime(mins);
+  document.getElementById('s-time-foot').textContent = Math.round(mins) + ' min total';
+}
+
+// ── PLAYLISTS ──────────────────────────────────────────
+function renderPls() {
+  const grid = document.getElementById('pl-grid');
+  const ep = document.getElementById('edit-panel');
+  const lbl = document.getElementById('pl-count-label');
+  lbl.textContent = data.length ? ' — ' + data.length : '';
+  if (!data.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><p>No playlists yet. Hit <strong>+ New Playlist</strong> to get started.</p></div>`;
+    ep.innerHTML = `<div class="empty"><p>Nothing to edit yet.</p></div>`;
+    return;
+  }
+  grid.innerHTML = data.map(p => {
+    const c = (p.lessons||[]).length;
+    return `<div class="pl-card" onclick="openDetail('${p.id}')">
+      <div class="pl-card-name">${esc(p.name)}</div>
+      <div class="pl-card-meta">${c} lesson${c!==1?'s':''}</div>
+      <a href="${esc(p.link)}" target="_blank" class="pl-card-link" onclick="event.stopPropagation()">View Playlist →</a>
+    </div>`;
+  }).join('');
+  ep.innerHTML = data.map(p => {
+    const c = (p.lessons||[]).length;
+    return `<div class="edit-row">
+      <div><div class="edit-row-name">${esc(p.name)}</div><div class="edit-row-meta">${c} lesson${c!==1?'s':''}</div></div>
+      <div class="edit-row-actions">
+        <button class="btn btn-ghost btn-xs" onclick="openEditPl('${p.id}')">Edit</button>
+        <button class="btn btn-danger btn-xs" onclick="deletePl('${p.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openDetail(id) {
+  activePlId = id;
+  const p = data.find(x => x.id === id);
+  document.getElementById('pls-list').style.display = 'none';
+  document.getElementById('pls-detail').style.display = '';
+  document.getElementById('d-title').textContent = p.name;
+  document.getElementById('d-link').href = p.link;
+  renderLessons(p);
+}
+
+function backToList() {
+  activePlId = null;
+  document.getElementById('pls-list').style.display = '';
+  document.getElementById('pls-detail').style.display = 'none';
+  renderPls();
+}
+
+function renderLessons(p) {
+  const tb = document.getElementById('lessons-body');
+  const ls = p.lessons || [];
+  if (!ls.length) {
+    tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--muted)">No lessons yet. Add your first one.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = ls.map((l,i) => {
+    const tot = (parseFloat(l.len)||0) * (1 + (l.rw||0));
+    return `<tr>
+      <td class="td-mono" style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">${esc(l.name)}</td>
+      <td class="td-mono">${fmtTime(l.len)}</td>
+      <td class="td-mono">${l.rw||0}×</td>
+      <td class="td-mono" style="color:var(--accent)">${fmtTime(tot)}</td>
+      <td>${badge(l.status)}</td>
+      <td>${l.vlink?`<a href="${esc(l.vlink)}" target="_blank" class="td-link">Watch →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+      <td>${l.nlink?`<a href="${esc(l.nlink)}" target="_blank" class="td-link">Open →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-xs" onclick="openEditLesson('${l.id}')">Edit</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteLesson('${l.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── PLAYLIST CRUD ──────────────────────────────────────
+function createPlaylist() {
+  const name = v('f-pl-name'), link = v('f-pl-link');
+  if (!name || !link) { toast('Name and link are required'); return; }
+  data.unshift({ id: uid(), name, link, lessons: [], ts: Date.now() });
+  save(); closeModal('m-create-pl'); renderPls(); toast('Playlist created');
+}
+function openEditPl(id) {
+  const p = data.find(x => x.id === id);
+  set('f-epl-id', id); set('f-epl-name', p.name); set('f-epl-link', p.link);
+  openModal('m-edit-pl');
+}
+function saveEditPlaylist() {
+  const id = v('f-epl-id'), name = v('f-epl-name'), link = v('f-epl-link');
+  if (!name || !link) { toast('Name and link are required'); return; }
+  const p = data.find(x => x.id === id);
+  p.name = name; p.link = link;
+  save(); closeModal('m-edit-pl'); renderPls(); toast('Saved');
+}
+function deletePl(id) {
+  if (!confirm('Delete this playlist and all its lessons?')) return;
+  data = data.filter(x => x.id !== id);
+  save(); renderPls(); toast('Deleted');
+}
+
+// ── LESSON CRUD ────────────────────────────────────────
+function openAddLesson() {
+  set('f-l-id',''); set('f-l-name',''); set('f-l-len',''); set('f-l-vlink',''); set('f-l-rw',''); set('f-l-nlink','');
+  document.getElementById('f-l-status').value = 'not-started';
+  document.getElementById('m-lesson-title').textContent = 'Add Lesson';
+  document.getElementById('m-lesson-save').textContent = 'Add Lesson';
+  openModal('m-lesson');
+}
+function openEditLesson(id) {
+  const p = data.find(x => x.id === activePlId);
+  const l = p.lessons.find(x => x.id === id);
+  set('f-l-id', id); set('f-l-name', l.name); set('f-l-len', l.len);
+  set('f-l-vlink', l.vlink||''); set('f-l-rw', l.rw||''); set('f-l-nlink', l.nlink||'');
+  document.getElementById('f-l-status').value = l.status || 'not-started';
+  document.getElementById('m-lesson-title').textContent = 'Edit Lesson';
+  document.getElementById('m-lesson-save').textContent = 'Save Changes';
+  openModal('m-lesson');
+}
+function saveLesson() {
+  const name = v('f-l-name'), len = v('f-l-len'), vlink = v('f-l-vlink');
+  if (!name || !len || !vlink) { toast('Name, length, and video link are required'); return; }
+  const p = data.find(x => x.id === activePlId);
+  const id = v('f-l-id');
+  const obj = { name, len: parseFloat(len), vlink, rw: parseInt(v('f-l-rw'))||0, status: document.getElementById('f-l-status').value, nlink: v('f-l-nlink'), ts: Date.now() };
+  if (id) {
+    const idx = p.lessons.findIndex(x => x.id === id);
+    p.lessons[idx] = { ...p.lessons[idx], ...obj };
+    toast('Lesson updated');
+  } else {
+    p.lessons.push({ id: uid(), ...obj });
+    toast('Lesson added');
+  }
+  save(); closeModal('m-lesson'); renderLessons(p);
+}
+function deleteLesson(id) {
+  if (!confirm('Delete this lesson?')) return;
+  const p = data.find(x => x.id === activePlId);
+  p.lessons = p.lessons.filter(x => x.id !== id);
+  save(); renderLessons(p); toast('Deleted');
+}
+
+// ── DATA SHEET ─────────────────────────────────────────
+function renderDataSheet() { renderFlat(); renderGrouped(); }
+function renderFlat() {
+  const tb = document.getElementById('flat-body');
+  const all = [];
+  data.forEach(p => (p.lessons||[]).forEach(l => all.push({...l, plName: p.name})));
+  all.sort((a,b) => b.ts - a.ts);
+  if (!all.length) { tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--muted)">No lessons yet.</td></tr>`; return; }
+  tb.innerHTML = all.map(l => {
+    const tot = (parseFloat(l.len)||0) * (1 + (l.rw||0));
+    return `<tr>
+      <td style="font-weight:600">${esc(l.name)}</td>
+      <td style="color:var(--muted);font-size:12px">${esc(l.plName)}</td>
+      <td class="td-mono">${fmtTime(l.len)}</td>
+      <td class="td-mono">${l.rw||0}×</td>
+      <td class="td-mono" style="color:var(--accent)">${fmtTime(tot)}</td>
+      <td>${badge(l.status)}</td>
+      <td>${l.vlink?`<a href="${esc(l.vlink)}" target="_blank" class="td-link">Watch →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+      <td>${l.nlink?`<a href="${esc(l.nlink)}" target="_blank" class="td-link">Open →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+function renderGrouped() {
+  const c = document.getElementById('grouped-body');
+  if (!data.length) { c.innerHTML = `<div class="empty"><p>No playlists yet.</p></div>`; return; }
+  c.innerHTML = data.map(p => {
+    const ls = p.lessons || [];
+    const rows = !ls.length
+      ? `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No lessons.</td></tr>`
+      : ls.map(l => {
+          const tot = (parseFloat(l.len)||0) * (1 + (l.rw||0));
+          return `<tr>
+            <td style="font-weight:600">${esc(l.name)}</td>
+            <td class="td-mono">${fmtTime(l.len)}</td>
+            <td class="td-mono">${l.rw||0}×</td>
+            <td class="td-mono" style="color:var(--accent)">${fmtTime(tot)}</td>
+            <td>${badge(l.status)}</td>
+            <td>${l.vlink?`<a href="${esc(l.vlink)}" target="_blank" class="td-link">Watch →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+            <td>${l.nlink?`<a href="${esc(l.nlink)}" target="_blank" class="td-link">Open →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+          </tr>`;
+        }).join('');
+    return `<div class="pl-group" id="grp-${p.id}">
+      <div class="pl-group-head" onclick="toggleGrp('${p.id}')">
+        <div><div class="pl-group-name">${esc(p.name)}</div><div class="pl-group-meta">${ls.length} lesson${ls.length!==1?'s':''}</div></div>
+        <span class="pl-group-chevron">▾</span>
+      </div>
+      <div class="pl-group-body">
+        <table><thead><tr>
+          <th>Lesson</th><th>Length</th><th>Rewatches</th><th>Total Time</th><th>Notes Status</th><th>Video</th><th>Notes</th>
+        </tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+}
+function switchMini(t) {
+  document.querySelectorAll('.mt-btn').forEach((b,i) => b.classList.toggle('active', ['flat','grouped'][i] === t));
+  document.querySelectorAll('.mt-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('mt-' + t).classList.add('active');
+}
+function toggleGrp(id) { document.getElementById('grp-' + id).classList.toggle('open'); }
+
+// ── MODALS ─────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSidebar(); document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')); } });
+
+// ── TOAST ──────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── HELPERS ────────────────────────────────────────────
+function v(id) { return document.getElementById(id).value.trim(); }
+function set(id, val) { document.getElementById(id).value = val; }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(m) {
+  const n = parseFloat(m) || 0;
+  if (n === 0) return '0m';
+  if (n < 60) return (Number.isInteger(n) ? n : n.toFixed(1)) + 'm';
+  const h = Math.floor(n/60), r = Math.round(n%60);
+  return r ? `${h}h ${r}m` : `${h}h`;
+}
+function badge(s) {
+  const map = {'not-started':['Not Started','b-ns'],'in-progress':['In Progress','b-ip'],'reviewing':['Reviewing','b-rv'],'completed':['Completed','b-done']};
+  const [lbl, cls] = map[s] || map['not-started'];
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+
+// ── INIT ───────────────────────────────────────────────
+(async () => {
+  toast('Loading your data...');
+  await loadFromCloud();
+  renderDash();
+})();
+</script>
+</body>
+</html>
