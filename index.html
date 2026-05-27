@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Breison's Trading Journal</title>
+<title>Note Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -43,8 +43,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Syne',
 .hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px}
 .hamburger span{display:block;width:22px;height:2px;background:var(--muted);border-radius:2px;transition:all .25s}
 .hamburger:hover span{background:var(--accent)}
-.topbar-title{font-size:14px;font-weight:700;letter-spacing:-.2px;color:var(--text)}
-.topbar-title em{color:var(--accent);font-style:normal}
+.topbar-title{font-size:13px;font-weight:700;letter-spacing:.2px;color:var(--text);font-family:'JetBrains Mono',monospace}
+.topbar-title em{color:var(--accent);font-style:normal;font-family:'JetBrains Mono',monospace}
 .topbar-right{display:flex;align-items:center;gap:8px}
 .settings-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s}
 .settings-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -192,9 +192,10 @@ tr:hover td{background:rgba(196,181,253,.03)}
 .fg{margin-bottom:16px}
 .fg label{display:block;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
 .fg label .req{color:var(--accent)}
-input[type=text],input[type=url],input[type=number],select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;transition:border-color .15s;-webkit-appearance:none;appearance:none}
+input[type=text],input[type=url],input[type=number],input[type=password],select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;transition:border-color .15s;-webkit-appearance:none;appearance:none}
 input:focus,select:focus{border-color:var(--accent)}
 input::placeholder{color:var(--muted2)}
+input:-webkit-autofill,input:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 1000px var(--bg) inset;-webkit-text-fill-color:var(--text);transition:background-color 5000s ease-in-out 0s}
 select{cursor:pointer}
 select option{background:var(--surface)}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
@@ -257,7 +258,7 @@ select option{background:var(--surface)}
 #login-screen{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center}
 #login-screen.hidden{display:none}
 .login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:380px}
-.login-logo{font-size:15px;font-weight:800;letter-spacing:-.2px;margin-bottom:28px;color:var(--text)}
+.login-logo{font-size:14px;font-weight:700;letter-spacing:.2px;margin-bottom:28px;color:var(--text);font-family:'JetBrains Mono',monospace}
 .login-logo em{color:var(--accent);font-style:normal}
 .login-box .fg{margin-bottom:16px}
 .login-box .fg label{display:block;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
@@ -272,7 +273,7 @@ select option{background:var(--surface)}
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo">Breison's <em>Trading Journal</em></div>
+    <div class="login-logo">Note <em>Tracker</em></div>
     <div class="fg"><label>Email</label><input type="text" id="l-email" placeholder="your@email.com"></div>
     <div class="fg"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"></div>
     <div class="login-error" id="l-err"></div>
@@ -286,7 +287,7 @@ select option{background:var(--surface)}
     <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
-    <div class="topbar-title">Breison's <em>Trading Journal</em></div>
+    <div class="topbar-title">Note <em>Tracker</em></div>
   </div>
   <div class="topbar-right">
     <button class="settings-btn" onclick="gotoTab('settings')" title="Settings">⚙</button>
@@ -319,7 +320,7 @@ select option{background:var(--surface)}
     </button>
   </nav>
   <div class="sidebar-footer">
-    <div class="sidebar-version">BTJ v2</div>
+    <div class="sidebar-version">NT v2</div>
   </div>
 </div>
 
@@ -753,18 +754,19 @@ async function save() {
   const token = session.access_token;
   const headers = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token };
   const payload = JSON.stringify(data);
+  const libPayload = JSON.stringify(linkLibrary);
   setSyncStatus('saving');
   try {
     if (recordId) {
       const res = await fetch(`${SB_URL}/rest/v1/note_tracker?id=eq.${recordId}`, {
-        method: 'PATCH', headers, body: JSON.stringify({ data: payload })
+        method: 'PATCH', headers, body: JSON.stringify({ data: payload, link_library: libPayload })
       });
       if (!res.ok) throw new Error('Save failed');
     } else {
       const res = await fetch(`${SB_URL}/rest/v1/note_tracker`, {
         method: 'POST',
         headers: { ...headers, 'Prefer': 'return=representation' },
-        body: JSON.stringify({ data: payload, user_id: session.user.id })
+        body: JSON.stringify({ data: payload, link_library: libPayload, user_id: session.user.id })
       });
       if (!res.ok) throw new Error('Save failed');
       const rows = await res.json();
@@ -791,6 +793,7 @@ async function loadFromCloud() {
     if (rows && rows.length > 0) {
       recordId = rows[0].id;
       data = JSON.parse(rows[0].data || '[]');
+      linkLibrary = JSON.parse(rows[0].link_library || '[]');
     }
   } catch(e) {
     console.error('Failed to load from cloud:', e);
@@ -1116,12 +1119,12 @@ function badge(s) {
 function saveApiKey() {
   const key = document.getElementById('s-api-key').value.trim();
   if (!key) { toast('Paste your API key first'); return; }
-  localStorage.setItem('btj_api_key', key);
+  localStorage.setItem('nt_api_key', key);
   document.getElementById('s-key-status').textContent = '✓ Saved';
   toast('API key saved');
 }
 function loadApiKey() {
-  const k = localStorage.getItem('btj_api_key');
+  const k = localStorage.getItem('nt_api_key');
   if (k) {
     document.getElementById('s-api-key').value = k;
     document.getElementById('s-key-status').textContent = '✓ Key loaded';
@@ -1168,13 +1171,9 @@ async function doSignOut() {
 }
 
 // ── LINK LIBRARY ───────────────────────────────────────
-function loadLinkLibrary() {
-  try { return JSON.parse(localStorage.getItem('btj_link_library') || '[]'); }
-  catch(e) { return []; }
-}
-function saveLinkLibrary(lib) {
-  localStorage.setItem('btj_link_library', JSON.stringify(lib));
-}
+let linkLibrary = [];
+function loadLinkLibrary() { return linkLibrary; }
+function saveLinkLibrary(lib) { linkLibrary = lib; save(); }
 
 function renderLinkLibrary() {
   const lib = loadLinkLibrary();
@@ -1325,6 +1324,8 @@ function renderCleaner() {
   sel.value = cur;
   document.getElementById('nc-output').style.display = 'none';
   document.getElementById('nc-saved-raw').style.display = 'none';
+  ncAttachments = [];
+  renderAttachmentList();
 }
 
 function onLessonSelect() {
@@ -1391,7 +1392,7 @@ async function saveRawNotes() {
 async function structureNotes() {
   const id = document.getElementById('nc-lesson').value;
   const raw = document.getElementById('nc-raw').value.trim();
-  const apiKey = localStorage.getItem('btj_api_key');
+  const apiKey = localStorage.getItem('nt_api_key');
   if (!id) { toast('Select a lesson first'); return; }
   if (!raw) { toast('Paste your notes first'); return; }
   if (!apiKey) { toast('Add your Claude API key in Settings first'); gotoTab('settings'); return; }
@@ -1547,6 +1548,8 @@ ${raw}`;
     }
 
     toast('Notes structured ✓');
+    ncAttachments = [];
+    renderAttachmentList();
   } catch(e) {
     toast('⚠️ Claude API error — check your key in Settings');
     console.error(e);
