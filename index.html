@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breison's Trading Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:       #08080b;
+  --surface:  #0f0f14;
+  --surface2: #161620;
+  --border:   #1e1e2a;
+  --accent:   #c4b5fd;
+  --accent-dim: rgba(196,181,253,0.1);
+  --accent-mid: rgba(196,181,253,0.18);
+  --text:     #ede9ff;
+  --muted:    #6b6880;
+  --muted2:   #3d3a50;
+  --green:    #a3e4b4;
+  --green-dim:rgba(163,228,180,0.12);
+  --blue:     #a5c8fa;
+  --blue-dim: rgba(165,200,250,0.12);
+  --yellow:   #f5d08a;
+  --yellow-dim:rgba(245,208,138,0.12);
+  --red:      #f4a0a0;
+  --red-dim:  rgba(244,160,160,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-size:14px;overflow-x:hidden}
+
+/* ── TOP BAR ── */
+.topbar {
+  position:fixed;top:0;left:0;right:0;height:56px;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;z-index:100;
+}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px}
+.hamburger span{display:block;width:22px;height:2px;background:var(--muted);border-radius:2px;transition:all .25s}
+.hamburger:hover span{background:var(--accent)}
+.topbar-title{font-size:14px;font-weight:700;letter-spacing:-.2px;color:var(--text)}
+.topbar-title em{color:var(--accent);font-style:normal}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.settings-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s}
+.settings-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── SIDEBAR OVERLAY ── */
+.sidebar-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;
+  opacity:0;transition:opacity .25s;
+}
+.sidebar-backdrop.open{display:block;opacity:1}
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;width:260px;
+  background:var(--surface);border-right:1px solid var(--border);
+  z-index:160;
+  transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+}
+.sidebar.open{transform:translateX(0)}
+.sidebar-header{
+  height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.sidebar-brand{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+.sidebar-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px}
+.sidebar-close:hover{color:var(--text)}
+.sidebar-nav{padding:16px 12px;flex:1}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;border-radius:8px;
+  background:none;border:none;color:var(--muted);
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;width:100%;text-align:left;
+  transition:all .15s;margin-bottom:2px;
+}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent)}
+.nav-item-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-divider{height:1px;background:var(--border);margin:10px 4px}
+.sidebar-footer{padding:16px 12px;border-top:1px solid var(--border)}
+.sidebar-version{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);padding:0 14px}
+
+/* ── MAIN ── */
+.main{margin-top:56px;padding:36px 40px;max-width:1200px;margin-left:auto;margin-right:auto}
+.page{display:none}
+.page.active{display:block}
+
+/* ── DASHBOARD ── */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:44px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 20px}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:400;line-height:1;color:var(--text)}
+.stat-num.hi{color:var(--accent)}
+.stat-foot{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:8px}
+.bar-track{height:2px;background:var(--surface2);border-radius:2px;margin-top:12px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .6s ease}
+
+/* ── SECTION ── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.sec-title{font-size:15px;font-weight:700}
+.sec-sub{font-size:11px;color:var(--muted);margin-left:8px;font-family:'JetBrains Mono',monospace}
+.divider{height:1px;background:var(--border);margin:32px 0}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;cursor:pointer;border:none;transition:all .15s}
+.btn-accent{background:var(--accent);color:#0a0a0f}
+.btn-accent:hover{background:#d4c6ff}
+.btn-ghost{background:none;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted2)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(244,160,160,.2)}
+.btn-danger:hover{background:rgba(244,160,160,.2)}
+.btn-sm{padding:6px 13px;font-size:11px}
+.btn-xs{padding:4px 10px;font-size:11px}
+.back-btn{background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:22px;padding:0}
+.back-btn:hover{color:var(--text)}
+
+/* ── PLAYLIST GRID ── */
+.pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:36px}
+.pl-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;cursor:pointer;transition:all .15s}
+.pl-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.pl-card-name{font-size:14px;font-weight:700;margin-bottom:5px}
+.pl-card-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.pl-card-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);text-decoration:none;margin-top:12px;font-family:'JetBrains Mono',monospace}
+.pl-card-link:hover{text-decoration:underline}
+
+/* ── EDIT PANEL ── */
+.edit-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.edit-row{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border)}
+.edit-row:last-child{border-bottom:none}
+.edit-row-name{font-size:13px;font-weight:600}
+.edit-row-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.edit-row-actions{display:flex;gap:8px;flex-shrink:0}
+
+/* ── DETAIL ── */
+.detail-head{margin-bottom:26px}
+.detail-title{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.detail-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);text-decoration:none;margin-top:6px;font-family:'JetBrains Mono',monospace}
+.detail-link:hover{text-decoration:underline}
+
+/* ── TABLE ── */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:11px 14px;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(196,181,253,.03)}
+.td-mono{font-family:'JetBrains Mono',monospace;font-size:11px}
+.td-link{color:var(--accent);text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:11px}
+.td-link:hover{text-decoration:underline}
+.td-actions{display:flex;gap:6px}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.b-ns{background:rgba(107,104,128,.15);color:var(--muted)}
+.b-ip{background:var(--blue-dim);color:var(--blue)}
+.b-rv{background:var(--yellow-dim);color:var(--yellow)}
+.b-done{background:var(--green-dim);color:var(--green)}
+
+/* ── MINI TABS ── */
+.mini-tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:3px;width:fit-content;margin-bottom:18px}
+.mt-btn{background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:7px 16px;border-radius:5px;cursor:pointer;transition:all .15s}
+.mt-btn.active{background:var(--surface2);color:var(--text)}
+.mt-pane{display:none}
+.mt-pane.active{display:block}
+
+/* ── GROUPED ── */
+.pl-group{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.pl-group-head{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;cursor:pointer;user-select:none;background:var(--surface2)}
+.pl-group-head:hover{background:var(--border)}
+.pl-group-name{font-size:13px;font-weight:700}
+.pl-group-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.pl-group-chevron{color:var(--muted);font-size:14px;transition:transform .2s}
+.pl-group.open .pl-group-chevron{transform:rotate(180deg)}
+.pl-group-body{display:none}
+.pl-group.open .pl-group-body{display:block}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty p{font-size:13px;margin-top:6px}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:22px}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.fg label .req{color:var(--accent)}
+input[type=text],input[type=url],input[type=number],select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;transition:border-color .15s;-webkit-appearance:none;appearance:none}
+input:focus,select:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted2)}
+select{cursor:pointer}
+select option{background:var(--surface)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+
+/* ── SETTINGS CARDS ── */
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
+.settings-card-title{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.sync-row{display:flex;align-items:center;gap:12px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);flex-shrink:0;transition:background .3s}
+.sync-dot.ok{background:var(--green)}
+.sync-dot.saving{background:var(--yellow)}
+.sync-dot.error{background:var(--red)}
+.sync-label{font-size:13px;font-weight:600}
+.sync-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ── LINK LIBRARY ── */
+.lib-empty{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);padding:8px 0}
+.lib-folder{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.lib-folder-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);cursor:pointer;user-select:none}
+.lib-folder-head:hover{background:var(--border)}
+.lib-folder-name{font-size:12px;font-weight:700}
+.lib-folder-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-left:8px}
+.lib-folder-chevron{color:var(--muted);font-size:12px;transition:transform .2s;margin-right:8px}
+.lib-folder.open .lib-folder-chevron{transform:rotate(180deg)}
+.lib-folder-body{display:none;padding:10px 14px}
+.lib-folder.open .lib-folder-body{display:block}
+.lib-term-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)}
+.lib-term-row:last-child{border-bottom:none}
+.lib-term-name{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)}
+.lib-add-term{margin-top:10px;display:flex;gap:8px;align-items:center}
+
+/* ── NOTE CLEANER OUTPUT SECTIONS ── */
+.nc-out-section{margin-bottom:14px}
+.nc-out-section-title{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.nc-summary-text{font-size:13px;line-height:1.7;color:var(--text)}
+.spell-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px}
+.spell-row:last-child{border-bottom:none}
+.spell-original{color:var(--red);text-decoration:line-through}
+.spell-arrow{color:var(--muted)}
+.spell-corrected{color:var(--green)}
+.flag-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.flag-row:last-child{border-bottom:none}
+.flag-term{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--yellow)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:8px;padding:11px 18px;font-size:12px;z-index:400;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none;font-family:'JetBrains Mono',monospace;color:var(--accent)}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── SETTINGS PAGE ── */
+.settings-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:12px;color:var(--muted)}
+.settings-empty .s-icon{font-size:36px;opacity:.3}
+.settings-empty p{font-size:13px}
+
+@media(max-width:800px){
+  .main{padding:20px}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center}
+#login-screen.hidden{display:none}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:380px}
+.login-logo{font-size:15px;font-weight:800;letter-spacing:-.2px;margin-bottom:28px;color:var(--text)}
+.login-logo em{color:var(--accent);font-style:normal}
+.login-box .fg{margin-bottom:16px}
+.login-box .fg label{display:block;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.login-error{font-size:12px;color:var(--red);margin-bottom:14px;font-family:'JetBrains Mono',monospace;display:none}
+.login-btn{width:100%;padding:11px;background:var(--accent);color:#0a0a0f;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.login-btn:hover{opacity:.85}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Breison's <em>Trading Journal</em></div>
+    <div class="fg"><label>Email</label><input type="text" id="l-email" placeholder="your@email.com"></div>
+    <div class="fg"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"></div>
+    <div class="login-error" id="l-err"></div>
+    <button class="login-btn" id="l-btn" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="topbar-title">Breison's <em>Trading Journal</em></div>
+  </div>
+  <div class="topbar-right">
+    <button class="settings-btn" onclick="gotoTab('settings')" title="Settings">⚙</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar-backdrop" id="backdrop" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-brand">Navigation</span>
+    <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+  </div>
+  <nav class="sidebar-nav">
+    <button class="nav-item active" id="nav-dash" onclick="gotoTab('dash')">
+      <span class="nav-item-icon">◈</span> Dashboard
+    </button>
+    <button class="nav-item" id="nav-playlists" onclick="gotoTab('playlists')">
+      <span class="nav-item-icon">◧</span> Playlists
+    </button>
+    <button class="nav-item" id="nav-datasheet" onclick="gotoTab('datasheet')">
+      <span class="nav-item-icon">▤</span> Data Sheet
+    </button>
+    <button class="nav-item" id="nav-cleaner" onclick="gotoTab('cleaner')">
+      <span class="nav-item-icon">✦</span> Note Cleaner
+    </button>
+    <div class="nav-divider"></div>
+    <button class="nav-item" id="nav-settings" onclick="gotoTab('settings')">
+      <span class="nav-item-icon">◎</span> Settings
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-version">BTJ v2</div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div id="page-dash" class="page active">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Lessons</div>
+        <div class="stat-num" id="s-lessons">0</div>
+        <div class="stat-foot" id="s-playlists">0 playlists</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Notes Progress</div>
+        <div class="stat-num hi" id="s-pct">0%</div>
+        <div class="bar-track"><div class="bar-fill" id="s-bar" style="width:0%"></div></div>
+        <div class="stat-foot" id="s-pct-foot">0 of 0 completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Rewatches</div>
+        <div class="stat-num" id="s-rw">0</div>
+        <div class="stat-foot" id="s-rw-foot">0 lessons rewatched</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Time Spent</div>
+        <div class="stat-num" id="s-time">0m</div>
+        <div class="stat-foot" id="s-time-foot">inc. rewatches</div>
+      </div>
+    </div>
+    <div class="sec-header" style="margin-bottom:14px;margin-top:8px">
+      <span class="sec-title" style="font-size:13px">Needs Review</span>
+      <span class="sec-sub" id="review-count-label"></span>
+    </div>
+    <div class="tbl-wrap" id="review-table-wrap">
+      <table>
+        <thead><tr><th>Lesson</th><th>Playlist</th><th>Rewatches</th><th>Notes Status</th><th>Video</th></tr></thead>
+        <tbody id="review-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PLAYLISTS -->
+  <div id="page-playlists" class="page">
+    <div id="pls-list">
+      <div class="sec-header">
+        <div style="display:flex;align-items:center">
+          <span class="sec-title">Playlists</span>
+          <span class="sec-sub" id="pl-count-label"></span>
+        </div>
+        <button class="btn btn-accent" onclick="openModal('m-create-pl')">+ New Playlist</button>
+      </div>
+      <div class="pl-grid" id="pl-grid"></div>
+      <div class="divider"></div>
+      <div class="sec-header" style="margin-bottom:14px">
+        <span class="sec-title">Edit Playlists</span>
+      </div>
+      <div class="edit-panel" id="edit-panel"></div>
+    </div>
+    <div id="pls-detail" style="display:none">
+      <button class="back-btn" onclick="backToList()">← Back to Playlists</button>
+      <div class="detail-head">
+        <div class="detail-title" id="d-title"></div>
+        <a href="#" id="d-link" target="_blank" class="detail-link">View full playlist →</a>
+      </div>
+      <div class="sec-header">
+        <span class="sec-title" style="font-size:13px;color:var(--muted)">Lessons</span>
+        <button class="btn btn-accent btn-sm" onclick="openAddLesson()">+ Add Lesson</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Lesson Name</th><th>Length</th><th>Rewatches</th><th>Total Time</th><th>Notes Status</th><th>Video</th><th>Notes</th><th></th>
+          </tr></thead>
+          <tbody id="lessons-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA SHEET -->
+  <div id="page-datasheet" class="page">
+    <div class="sec-header" style="margin-bottom:18px">
+      <span class="sec-title">Data Sheet</span>
+    </div>
+    <div class="mini-tabs">
+      <button class="mt-btn active" onclick="switchMini('flat')">All Lessons</button>
+      <button class="mt-btn" onclick="switchMini('grouped')">By Playlist</button>
+    </div>
+    <div id="mt-flat" class="mt-pane active">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Lesson</th><th>Playlist</th><th>Length</th><th>Rewatches</th><th>Total Time</th><th>Notes Status</th><th>Video</th><th>Notes</th>
+          </tr></thead>
+          <tbody id="flat-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="mt-grouped" class="mt-pane">
+      <div id="grouped-body"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="page-settings" class="page">
+    <div class="sec-header" style="margin-bottom:32px">
+      <span class="sec-title">Settings</span>
+    </div>
+
+    <!-- Cloud Sync -->
+    <div class="settings-card" id="save-status-card">
+      <div class="settings-card-title">Cloud Sync</div>
+      <div class="sync-row">
+        <div class="sync-dot" id="sync-dot"></div>
+        <div>
+          <div class="sync-label" id="sync-label">Checking...</div>
+          <div class="sync-sub" id="sync-sub"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Claude API Key -->
+    <div class="settings-card" style="margin-top:14px">
+      <div class="settings-card-title">Claude API Key</div>
+      <div class="fg" style="margin-bottom:10px">
+        <input type="password" id="s-api-key" placeholder="sk-ant-api03-..." style="font-family:'JetBrains Mono',monospace">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-accent btn-sm" onclick="saveApiKey()">Save Key</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleKeyVisibility()">Show</button>
+        <span id="s-key-status" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div style="margin-top:12px">
+        <a href="https://console.anthropic.com/settings/billing" target="_blank" class="td-link" style="font-size:12px">View Anthropic billing & credits →</a>
+      </div>
+    </div>
+
+    <!-- Obsidian Link Library -->
+    <div class="settings-card" style="margin-top:14px">
+      <div class="settings-card-title">Obsidian Link Library</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">Define your known Obsidian links. Claude will automatically format these as <span style="font-family:'JetBrains Mono',monospace;color:var(--accent)">[[term]]</span> when structuring your notes.</p>
+      <div id="lib-folders"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="openModal('m-add-folder')">+ Add Folder</button>
+    </div>
+
+    <!-- Account -->
+    <div class="settings-card" style="margin-top:14px">
+      <div class="settings-card-title">Account</div>
+      <div class="sync-row" style="justify-content:space-between;align-items:center">
+        <div class="sync-sub" id="sync-email" style="color:var(--muted)"></div>
+        <button class="btn btn-ghost btn-sm" onclick="doSignOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTE CLEANER -->
+  <div id="page-cleaner" class="page">
+    <div class="sec-header" style="margin-bottom:24px">
+      <span class="sec-title">Note Cleaner</span>
+    </div>
+
+    <!-- Step 1: Select lesson -->
+    <div class="settings-card" style="margin-bottom:14px">
+      <div class="settings-card-title">Step 1 — Select Lesson</div>
+      <select id="nc-lesson" onchange="onLessonSelect()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none">
+        <option value="">— choose a lesson —</option>
+      </select>
+    </div>
+
+    <!-- Step 2: Paste notes -->
+    <div class="settings-card" style="margin-bottom:14px">
+      <div class="settings-card-title">Step 2 — Paste Raw Notes</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:10px;font-family:'JetBrains Mono',monospace">You can also paste screenshots directly into the text area — they'll be added as attachments automatically.</p>
+      <textarea id="nc-raw" placeholder="Paste your raw notes here... (Cmd+V images work too)" style="width:100%;min-height:200px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;resize:vertical;line-height:1.6"></textarea>
+    </div>
+
+    <!-- Step 3: Attachments -->
+    <div class="settings-card" style="margin-bottom:14px">
+      <div class="settings-card-title">Step 3 — Attachments (optional)</div>
+      <div id="nc-attach-list" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="nc-file-input" accept="image/*" multiple style="display:none" onchange="handleAttachments(this)">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('nc-file-input').click()">+ Add Image</button>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)" id="nc-attach-count"></span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">
+      <button class="btn btn-ghost" onclick="saveRawNotes()">💾 Save Raw Notes</button>
+      <button class="btn btn-accent" onclick="structureNotes()" id="nc-structure-btn">✦ Structure with Claude</button>
+    </div>
+
+    <!-- Output -->
+    <div id="nc-output" style="display:none">
+      <div class="divider"></div>
+
+      <!-- Summary -->
+      <div class="nc-out-section" id="nc-summary-section" style="display:none">
+        <div class="settings-card">
+          <div class="nc-out-section-title">Note Summary</div>
+          <p id="nc-summary-text" class="nc-summary-text"></p>
+        </div>
+      </div>
+
+      <!-- Spelling Corrections -->
+      <div class="nc-out-section" id="nc-spelling-section" style="display:none">
+        <div class="settings-card">
+          <div class="nc-out-section-title">Spelling Corrections</div>
+          <div id="nc-spelling-list"></div>
+        </div>
+      </div>
+
+      <!-- Flagged New Terms -->
+      <div class="nc-out-section" id="nc-flagged-section" style="display:none">
+        <div class="settings-card">
+          <div class="nc-out-section-title">New Terms — Add to Library?</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:'JetBrains Mono',monospace">Claude spotted these terms in your notes that aren't in your link library yet.</p>
+          <div id="nc-flagged-list"></div>
+        </div>
+      </div>
+
+      <!-- Structured Notes -->
+      <div class="nc-out-section">
+        <div class="sec-header" style="margin-bottom:14px">
+          <span class="sec-title" style="font-size:13px">Structured Notes</span>
+          <button class="btn btn-accent btn-sm" onclick="downloadMD()">↓ Download .md</button>
+        </div>
+        <div class="settings-card">
+          <pre id="nc-result" style="font-family:'JetBrains Mono',monospace;font-size:12px;white-space:pre-wrap;line-height:1.7;color:var(--text)"></pre>
+        </div>
+      </div>
+
+      <!-- Attachments Export -->
+      <div id="nc-attachments-export" style="margin-top:14px;display:none">
+        <div class="settings-card">
+          <div class="settings-card-title">Attachments — Add to Obsidian Vault</div>
+          <div id="nc-attach-export-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Saved raw notes for this lesson -->
+    <div id="nc-saved-raw" style="display:none;margin-top:14px">
+      <div class="divider"></div>
+      <div class="sec-header" style="margin-bottom:14px">
+        <span class="sec-title" style="font-size:13px;color:var(--muted)">Saved Raw Notes</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadRawIntoEditor()">Load into editor</button>
+      </div>
+      <div class="settings-card">
+        <pre id="nc-saved-raw-text" style="font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap;line-height:1.6;color:var(--muted)"></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODALS -->
+
+<div class="overlay" id="m-create-pl">
+  <div class="modal">
+    <div class="modal-title">New Playlist</div>
+    <div class="fg"><label>Playlist Name <span class="req">*</span></label><input type="text" id="f-pl-name" placeholder="e.g. ICT Core Content"></div>
+    <div class="fg"><label>Playlist Link <span class="req">*</span></label><input type="url" id="f-pl-link" placeholder="https://..."></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-create-pl')">Cancel</button>
+      <button class="btn btn-accent" onclick="createPlaylist()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-edit-pl">
+  <div class="modal">
+    <div class="modal-title">Edit Playlist</div>
+    <input type="hidden" id="f-epl-id">
+    <div class="fg"><label>Playlist Name <span class="req">*</span></label><input type="text" id="f-epl-name"></div>
+    <div class="fg"><label>Playlist Link <span class="req">*</span></label><input type="url" id="f-epl-link"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-edit-pl')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveEditPlaylist()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-lesson">
+  <div class="modal">
+    <div class="modal-title" id="m-lesson-title">Add Lesson</div>
+    <input type="hidden" id="f-l-id">
+    <div class="fg"><label>Lesson Name <span class="req">*</span></label><input type="text" id="f-l-name" placeholder="e.g. Market Structure"></div>
+    <div class="fg"><label>Video Length (minutes) <span class="req">*</span></label><input type="number" id="f-l-len" placeholder="e.g. 45" min="0" step="0.5"></div>
+    <div class="fg"><label>Video Link <span class="req">*</span></label><input type="url" id="f-l-vlink" placeholder="https://..."></div>
+    <div class="fg"><label>Rewatches</label><input type="number" id="f-l-rw" placeholder="0" min="0"></div>
+    <div class="fg"><label>Notes Status</label>
+      <select id="f-l-status">
+        <option value="not-started">Not Started</option>
+        <option value="in-progress">In Progress</option>
+        <option value="reviewing">Reviewing</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div class="fg"><label>Notes Link</label><input type="url" id="f-l-nlink" placeholder="https://..."></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-lesson')">Cancel</button>
+      <button class="btn btn-accent" id="m-lesson-save" onclick="saveLesson()">Add Lesson</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Folder Modal -->
+<div class="overlay" id="m-add-folder">
+  <div class="modal">
+    <div class="modal-title">New Folder</div>
+    <div class="fg"><label>Folder Name <span class="req">*</span></label><input type="text" id="f-folder-name" placeholder="e.g. ICT Concepts"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-add-folder')">Cancel</button>
+      <button class="btn btn-accent" onclick="addFolder()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Term Modal -->
+<div class="overlay" id="m-add-term">
+  <div class="modal">
+    <div class="modal-title">Add Term</div>
+    <input type="hidden" id="f-term-folder-id">
+    <div class="fg"><label>Term <span class="req">*</span></label><input type="text" id="f-term-name" placeholder="e.g. FVG"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-add-term')">Cancel</button>
+      <button class="btn btn-accent" onclick="addTerm()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Flagged Term Modal -->
+<div class="overlay" id="m-add-flagged">
+  <div class="modal">
+    <div class="modal-title">Add to Link Library</div>
+    <input type="hidden" id="f-flagged-term">
+    <div class="fg">
+      <label>Term</label>
+      <input type="text" id="f-flagged-term-display" disabled style="color:var(--accent)">
+    </div>
+    <div class="fg">
+      <label>Add to Folder <span class="req">*</span></label>
+      <select id="f-flagged-folder"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('m-add-flagged')">Cancel</button>
+      <button class="btn btn-accent" onclick="confirmAddFlaggedTerm()">Add to Library</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────
+const SB_URL = 'https://mctiectixnbliqpxtleb.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1jdGllY3RpeG5ibGlxcHh0bGViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MTM4NDIsImV4cCI6MjA5NTM4OTg0Mn0.jidpPozmPTnd-38nGXIztwmC_Op6tC1UVyTgV_B3Wto';
+const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { autoRefreshToken: true, persistSession: true } });
+
+// ── STATE ──────────────────────────────────────────────
+let data = [];
+let activePlId = null;
+let recordId = null;
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ── AUTH ───────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  const btn = document.getElementById('l-btn');
+  const err = document.getElementById('l-err');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    err.textContent = 'Wrong email or password.';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  } else {
+    document.getElementById('login-screen').classList.add('hidden');
+    await loadFromCloud();
+    renderDash();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Enter key to login
+  ['l-email','l-pass'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  });
+
+  // Paste image support in Note Cleaner
+  document.getElementById('nc-raw').addEventListener('paste', e => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        const reader = new FileReader();
+        const ext = item.type.split('/')[1] || 'png';
+        const name = 'pasted-image-' + (ncAttachments.length + 1) + '.' + ext;
+        reader.onload = ev => {
+          ncAttachments.push({ name, dataUrl: ev.target.result, file });
+          renderAttachmentList();
+          toast('Image pasted ✓');
+        };
+        reader.readAsDataURL(file);
+        // don't prevent default so text paste still works normally
+      }
+    }
+  });
+});
+
+async function save() {
+  const { data: { session }, error: refreshError } = await sb.auth.getSession();
+  if (!session || refreshError) {
+    toast('⚠️ Session expired — please sign in again');
+    setTimeout(() => {
+      document.getElementById('login-screen').classList.remove('hidden');
+    }, 1500);
+    return;
+  }
+  const token = session.access_token;
+  const headers = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token };
+  const payload = JSON.stringify(data);
+  setSyncStatus('saving');
+  try {
+    if (recordId) {
+      const res = await fetch(`${SB_URL}/rest/v1/note_tracker?id=eq.${recordId}`, {
+        method: 'PATCH', headers, body: JSON.stringify({ data: payload })
+      });
+      if (!res.ok) throw new Error('Save failed');
+    } else {
+      const res = await fetch(`${SB_URL}/rest/v1/note_tracker`, {
+        method: 'POST',
+        headers: { ...headers, 'Prefer': 'return=representation' },
+        body: JSON.stringify({ data: payload, user_id: session.user.id })
+      });
+      if (!res.ok) throw new Error('Save failed');
+      const rows = await res.json();
+      if (rows && rows[0]) recordId = rows[0].id;
+    }
+    const now = new Date();
+    lastSaved = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    setSyncStatus('ok', 'Last saved ' + lastSaved);
+  } catch(e) {
+    setSyncStatus('error');
+    toast('⚠️ Could not save — check your connection');
+    console.error('Save error:', e);
+  }
+}
+
+async function loadFromCloud() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const token = session.access_token;
+    const headers = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token };
+    const res = await fetch(`${SB_URL}/rest/v1/note_tracker?select=*&limit=1`, { headers });
+    const rows = await res.json();
+    if (rows && rows.length > 0) {
+      recordId = rows[0].id;
+      data = JSON.parse(rows[0].data || '[]');
+    }
+  } catch(e) {
+    console.error('Failed to load from cloud:', e);
+    toast('Could not connect to cloud — check your connection');
+  }
+}
+
+// ── SIDEBAR ────────────────────────────────────────────
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const b = document.getElementById('backdrop');
+  const open = s.classList.contains('open');
+  if (open) { s.classList.remove('open'); b.classList.remove('open'); }
+  else { s.classList.add('open'); b.classList.add('open'); }
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('open');
+}
+
+// ── TABS ───────────────────────────────────────────────
+let prevTab = 'dash';
+function gotoTab(t) {
+  const current = ['dash','playlists','datasheet','settings','cleaner'].find(id => document.getElementById('page-'+id)?.classList.contains('active'));
+  if (t === 'settings' && current === 'settings') { gotoTab(prevTab); return; }
+  if (t !== 'settings') prevTab = t;
+  if (t === 'cleaner' && current === 'cleaner') { gotoTab(prevTab); return; }
+  ['dash','playlists','datasheet','settings','cleaner'].forEach(id => {
+    document.getElementById('nav-' + id)?.classList.toggle('active', id === t);
+    document.getElementById('page-' + id)?.classList.toggle('active', id === t);
+  });
+  closeSidebar();
+  if (t === 'dash') renderDash();
+  if (t === 'playlists') renderPls();
+  if (t === 'datasheet') renderDataSheet();
+  if (t === 'settings') renderSettings();
+  if (t === 'cleaner') renderCleaner();
+}
+
+// ── DASHBOARD ──────────────────────────────────────────
+function renderDash() {
+  const all = data.flatMap(p => p.lessons || []);
+  const total = all.length, plCount = data.length;
+  const rw = all.reduce((s,l) => s + (l.rw||0), 0);
+  const rwCount = all.filter(l => (l.rw||0) > 0).length;
+  const done = all.filter(l => l.status === 'completed').length;
+  const pct = total > 0 ? Math.round(done/total*100) : 0;
+  const mins = all.reduce((s,l) => s + (parseFloat(l.len)||0) * (1 + (l.rw||0)), 0);
+  document.getElementById('s-lessons').textContent = total;
+  document.getElementById('s-playlists').textContent = plCount + ' playlist' + (plCount!==1?'s':'');
+  document.getElementById('s-pct').textContent = pct + '%';
+  document.getElementById('s-bar').style.width = pct + '%';
+  document.getElementById('s-pct-foot').textContent = done + ' of ' + total + ' completed';
+  document.getElementById('s-rw').textContent = rw;
+  document.getElementById('s-rw-foot').textContent = rwCount + ' lesson' + (rwCount!==1?'s':'') + ' rewatched';
+  document.getElementById('s-time').textContent = fmtTime(mins);
+  document.getElementById('s-time-foot').textContent = Math.round(mins) + ' min total';
+
+  const review = [];
+  data.forEach(p => (p.lessons||[]).forEach(l => {
+    if ((l.rw||0) > 0 && l.status !== 'completed') review.push({...l, plName: p.name});
+  }));
+  const rb = document.getElementById('review-body');
+  const rl = document.getElementById('review-count-label');
+  rl.textContent = review.length ? ' — ' + review.length + ' lesson' + (review.length!==1?'s':'') : '';
+  if (!review.length) {
+    rb.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">No lessons need review right now.</td></tr>`;
+  } else {
+    rb.innerHTML = review.map(l => `<tr>
+      <td style="font-weight:600">${esc(l.name)}</td>
+      <td style="color:var(--muted);font-size:12px">${esc(l.plName)}</td>
+      <td class="td-mono">${l.rw||0}×</td>
+      <td>${badge(l.status)}</td>
+      <td>${l.vlink?`<a href="${esc(l.vlink)}" target="_blank" class="td-link">Watch →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+    </tr>`).join('');
+  }
+}
+
+// ── PLAYLISTS ──────────────────────────────────────────
+function renderPls() {
+  const grid = document.getElementById('pl-grid');
+  const ep = document.getElementById('edit-panel');
+  const lbl = document.getElementById('pl-count-label');
+  lbl.textContent = data.length ? ' — ' + data.length : '';
+  if (!data.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><p>No playlists yet. Hit <strong>+ New Playlist</strong> to get started.</p></div>`;
+    ep.innerHTML = `<div class="empty"><p>Nothing to edit yet.</p></div>`;
+    return;
+  }
+  grid.innerHTML = data.map(p => {
+    const c = (p.lessons||[]).length;
+    return `<div class="pl-card" onclick="openDetail('${p.id}')">
+      <div class="pl-card-name">${esc(p.name)}</div>
+      <div class="pl-card-meta">${c} lesson${c!==1?'s':''}</div>
+      <a href="${esc(p.link)}" target="_blank" class="pl-card-link" onclick="event.stopPropagation()">View Playlist →</a>
+    </div>`;
+  }).join('');
+  ep.innerHTML = data.map(p => {
+    const c = (p.lessons||[]).length;
+    return `<div class="edit-row">
+      <div><div class="edit-row-name">${esc(p.name)}</div><div class="edit-row-meta">${c} lesson${c!==1?'s':''}</div></div>
+      <div class="edit-row-actions">
+        <button class="btn btn-ghost btn-xs" onclick="openEditPl('${p.id}')">Edit</button>
+        <button class="btn btn-danger btn-xs" onclick="deletePl('${p.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openDetail(id) {
+  activePlId = id;
+  const p = data.find(x => x.id === id);
+  document.getElementById('pls-list').style.display = 'none';
+  document.getElementById('pls-detail').style.display = '';
+  document.getElementById('d-title').textContent = p.name;
+  document.getElementById('d-link').href = p.link;
+  renderLessons(p);
+}
+
+function backToList() {
+  activePlId = null;
+  document.getElementById('pls-list').style.display = '';
+  document.getElementById('pls-detail').style.display = 'none';
+  renderPls();
+}
+
+function renderLessons(p) {
+  const tb = document.getElementById('lessons-body');
+  const ls = p.lessons || [];
+  if (!ls.length) {
+    tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--muted)">No lessons yet. Add your first one.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = ls.map((l,i) => {
+    const tot = (parseFloat(l.len)||0) * (1 + (l.rw||0));
+    return `<tr>
+      <td class="td-mono" style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">${esc(l.name)}</td>
+      <td class="td-mono">${fmtTime(l.len)}</td>
+      <td class="td-mono">${l.rw||0}×</td>
+      <td class="td-mono" style="color:var(--accent)">${fmtTime(tot)}</td>
+      <td>${badge(l.status)}</td>
+      <td>${l.vlink?`<a href="${esc(l.vlink)}" target="_blank" class="td-link">Watch →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+      <td>${l.nlink?`<a href="${esc(l.nlink)}" target="_blank" class="td-link">Open →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-xs" onclick="openEditLesson('${l.id}')">Edit</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteLesson('${l.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── PLAYLIST CRUD ──────────────────────────────────────
+function createPlaylist() {
+  const name = v('f-pl-name'), link = v('f-pl-link');
+  if (!name || !link) { toast('Name and link are required'); return; }
+  data.unshift({ id: uid(), name, link, lessons: [], ts: Date.now() });
+  save(); closeModal('m-create-pl'); renderPls(); toast('Playlist created');
+}
+function openEditPl(id) {
+  const p = data.find(x => x.id === id);
+  set('f-epl-id', id); set('f-epl-name', p.name); set('f-epl-link', p.link);
+  openModal('m-edit-pl');
+}
+function saveEditPlaylist() {
+  const id = v('f-epl-id'), name = v('f-epl-name'), link = v('f-epl-link');
+  if (!name || !link) { toast('Name and link are required'); return; }
+  const p = data.find(x => x.id === id);
+  p.name = name; p.link = link;
+  save(); closeModal('m-edit-pl'); renderPls(); toast('Saved');
+}
+function deletePl(id) {
+  if (!confirm('Delete this playlist and all its lessons?')) return;
+  data = data.filter(x => x.id !== id);
+  save(); renderPls(); toast('Deleted');
+}
+
+// ── LESSON CRUD ────────────────────────────────────────
+function openAddLesson() {
+  set('f-l-id',''); set('f-l-name',''); set('f-l-len',''); set('f-l-vlink',''); set('f-l-rw',''); set('f-l-nlink','');
+  document.getElementById('f-l-status').value = 'not-started';
+  document.getElementById('m-lesson-title').textContent = 'Add Lesson';
+  document.getElementById('m-lesson-save').textContent = 'Add Lesson';
+  openModal('m-lesson');
+}
+function openEditLesson(id) {
+  const p = data.find(x => x.id === activePlId);
+  const l = p.lessons.find(x => x.id === id);
+  set('f-l-id', id); set('f-l-name', l.name); set('f-l-len', l.len);
+  set('f-l-vlink', l.vlink||''); set('f-l-rw', l.rw||''); set('f-l-nlink', l.nlink||'');
+  document.getElementById('f-l-status').value = l.status || 'not-started';
+  document.getElementById('m-lesson-title').textContent = 'Edit Lesson';
+  document.getElementById('m-lesson-save').textContent = 'Save Changes';
+  openModal('m-lesson');
+}
+function saveLesson() {
+  const name = v('f-l-name'), len = v('f-l-len'), vlink = v('f-l-vlink');
+  if (!name || !len || !vlink) { toast('Name, length, and video link are required'); return; }
+  const p = data.find(x => x.id === activePlId);
+  const id = v('f-l-id');
+  const obj = { name, len: parseFloat(len), vlink, rw: parseInt(v('f-l-rw'))||0, status: document.getElementById('f-l-status').value, nlink: v('f-l-nlink'), ts: Date.now() };
+  if (id) {
+    const idx = p.lessons.findIndex(x => x.id === id);
+    p.lessons[idx] = { ...p.lessons[idx], ...obj };
+    toast('Lesson updated');
+  } else {
+    p.lessons.push({ id: uid(), ...obj });
+    toast('Lesson added');
+  }
+  save(); closeModal('m-lesson'); renderLessons(p);
+}
+function deleteLesson(id) {
+  if (!confirm('Delete this lesson?')) return;
+  const p = data.find(x => x.id === activePlId);
+  p.lessons = p.lessons.filter(x => x.id !== id);
+  save(); renderLessons(p); toast('Deleted');
+}
+
+// ── DATA SHEET ─────────────────────────────────────────
+function renderDataSheet() { renderFlat(); renderGrouped(); }
+function renderFlat() {
+  const tb = document.getElementById('flat-body');
+  const all = [];
+  data.forEach(p => (p.lessons||[]).forEach(l => all.push({...l, plName: p.name})));
+  all.sort((a,b) => b.ts - a.ts);
+  if (!all.length) { tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--muted)">No lessons yet.</td></tr>`; return; }
+  tb.innerHTML = all.map(l => {
+    const tot = (parseFloat(l.len)||0) * (1 + (l.rw||0));
+    return `<tr>
+      <td style="font-weight:600">${esc(l.name)}</td>
+      <td style="color:var(--muted);font-size:12px">${esc(l.plName)}</td>
+      <td class="td-mono">${fmtTime(l.len)}</td>
+      <td class="td-mono">${l.rw||0}×</td>
+      <td class="td-mono" style="color:var(--accent)">${fmtTime(tot)}</td>
+      <td>${badge(l.status)}</td>
+      <td>${l.vlink?`<a href="${esc(l.vlink)}" target="_blank" class="td-link">Watch →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+      <td>${l.nlink?`<a href="${esc(l.nlink)}" target="_blank" class="td-link">Open →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+function renderGrouped() {
+  const c = document.getElementById('grouped-body');
+  if (!data.length) { c.innerHTML = `<div class="empty"><p>No playlists yet.</p></div>`; return; }
+  c.innerHTML = data.map(p => {
+    const ls = p.lessons || [];
+    const rows = !ls.length
+      ? `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No lessons.</td></tr>`
+      : ls.map(l => {
+          const tot = (parseFloat(l.len)||0) * (1 + (l.rw||0));
+          return `<tr>
+            <td style="font-weight:600">${esc(l.name)}</td>
+            <td class="td-mono">${fmtTime(l.len)}</td>
+            <td class="td-mono">${l.rw||0}×</td>
+            <td class="td-mono" style="color:var(--accent)">${fmtTime(tot)}</td>
+            <td>${badge(l.status)}</td>
+            <td>${l.vlink?`<a href="${esc(l.vlink)}" target="_blank" class="td-link">Watch →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+            <td>${l.nlink?`<a href="${esc(l.nlink)}" target="_blank" class="td-link">Open →</a>`:'<span style="color:var(--muted2)">—</span>'}</td>
+          </tr>`;
+        }).join('');
+    return `<div class="pl-group" id="grp-${p.id}">
+      <div class="pl-group-head" onclick="toggleGrp('${p.id}')">
+        <div><div class="pl-group-name">${esc(p.name)}</div><div class="pl-group-meta">${ls.length} lesson${ls.length!==1?'s':''}</div></div>
+        <span class="pl-group-chevron">▾</span>
+      </div>
+      <div class="pl-group-body">
+        <table><thead><tr>
+          <th>Lesson</th><th>Length</th><th>Rewatches</th><th>Total Time</th><th>Notes Status</th><th>Video</th><th>Notes</th>
+        </tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+}
+function switchMini(t) {
+  document.querySelectorAll('.mt-btn').forEach((b,i) => b.classList.toggle('active', ['flat','grouped'][i] === t));
+  document.querySelectorAll('.mt-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('mt-' + t).classList.add('active');
+}
+function toggleGrp(id) { document.getElementById('grp-' + id).classList.toggle('open'); }
+
+// ── MODALS ─────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSidebar(); document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')); } });
+
+// ── TOAST ──────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── HELPERS ────────────────────────────────────────────
+function v(id) { return document.getElementById(id).value.trim(); }
+function set(id, val) { document.getElementById(id).value = val; }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(m) {
+  const n = parseFloat(m) || 0;
+  if (n === 0) return '0m';
+  if (n < 60) return (Number.isInteger(n) ? n : n.toFixed(1)) + 'm';
+  const totalMins = Math.round(n);
+  const days = Math.floor(totalMins / 1440);
+  const h = Math.floor((totalMins % 1440) / 60);
+  const r = totalMins % 60;
+  if (days > 0) {
+    let s = days + 'd';
+    if (h) s += ' ' + h + 'h';
+    if (r) s += ' ' + r + 'm';
+    return s;
+  }
+  return r ? `${h}h ${r}m` : `${h}h`;
+}
+function badge(s) {
+  const map = {'not-started':['Not Started','b-ns'],'in-progress':['In Progress','b-ip'],'reviewing':['Reviewing','b-rv'],'completed':['Completed','b-done']};
+  const [lbl, cls] = map[s] || map['not-started'];
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+
+// ── API KEY ────────────────────────────────────────────
+function saveApiKey() {
+  const key = document.getElementById('s-api-key').value.trim();
+  if (!key) { toast('Paste your API key first'); return; }
+  localStorage.setItem('btj_api_key', key);
+  document.getElementById('s-key-status').textContent = '✓ Saved';
+  toast('API key saved');
+}
+function loadApiKey() {
+  const k = localStorage.getItem('btj_api_key');
+  if (k) {
+    document.getElementById('s-api-key').value = k;
+    document.getElementById('s-key-status').textContent = '✓ Key loaded';
+  }
+}
+function toggleKeyVisibility() {
+  const inp = document.getElementById('s-api-key');
+  const btn = event.target;
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
+  else { inp.type = 'password'; btn.textContent = 'Show'; }
+}
+
+// ── SETTINGS ──────────────────────────────────────────
+let lastSaved = null;
+let saveStatus = 'ok';
+
+function setSyncStatus(status, sub) {
+  saveStatus = status;
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  const subEl = document.getElementById('sync-sub');
+  if (!dot) return;
+  dot.className = 'sync-dot ' + status;
+  label.textContent = status === 'ok' ? 'All changes saved' : status === 'saving' ? 'Saving...' : 'Save failed';
+  if (sub) subEl.textContent = sub;
+}
+
+async function renderSettings() {
+  const { data: { session } } = await sb.auth.getSession();
+  const emailEl = document.getElementById('sync-email');
+  if (emailEl && session) emailEl.textContent = session.user.email;
+  if (lastSaved) {
+    setSyncStatus('ok', 'Last saved ' + lastSaved);
+  } else {
+    setSyncStatus('ok', 'Connected');
+  }
+  loadApiKey();
+  renderLinkLibrary();
+}
+
+async function doSignOut() {
+  await sb.auth.signOut();
+  document.getElementById('login-screen').classList.remove('hidden');
+}
+
+// ── LINK LIBRARY ───────────────────────────────────────
+function loadLinkLibrary() {
+  try { return JSON.parse(localStorage.getItem('btj_link_library') || '[]'); }
+  catch(e) { return []; }
+}
+function saveLinkLibrary(lib) {
+  localStorage.setItem('btj_link_library', JSON.stringify(lib));
+}
+
+function renderLinkLibrary() {
+  const lib = loadLinkLibrary();
+  const container = document.getElementById('lib-folders');
+  if (!lib.length) {
+    container.innerHTML = '<div class="lib-empty">No folders yet. Add a folder to get started.</div>';
+    return;
+  }
+  container.innerHTML = lib.map(folder => {
+    const termCount = (folder.terms || []).length;
+    const termsHTML = (folder.terms || []).length
+      ? folder.terms.map(t => `
+          <div class="lib-term-row">
+            <span class="lib-term-name">[[${esc(t.term)}]]</span>
+            <button class="btn btn-danger btn-xs" onclick="deleteTerm('${folder.id}','${t.id}')">✕</button>
+          </div>`).join('')
+      : '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--muted2);padding:6px 0">No terms yet.</div>';
+    return `
+      <div class="lib-folder" id="libf-${folder.id}">
+        <div class="lib-folder-head" onclick="toggleLibFolder('${folder.id}')">
+          <div style="display:flex;align-items:center">
+            <span class="lib-folder-chevron">▾</span>
+            <span class="lib-folder-name">${esc(folder.name)}</span>
+            <span class="lib-folder-meta">${termCount} term${termCount!==1?'s':''}</span>
+          </div>
+          <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();deleteFolder('${folder.id}')">Delete</button>
+        </div>
+        <div class="lib-folder-body">
+          ${termsHTML}
+          <div class="lib-add-term">
+            <button class="btn btn-ghost btn-xs" onclick="openAddTerm('${folder.id}')">+ Add Term</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleLibFolder(id) {
+  document.getElementById('libf-' + id)?.classList.toggle('open');
+}
+
+function addFolder() {
+  const name = v('f-folder-name');
+  if (!name) { toast('Enter a folder name'); return; }
+  const lib = loadLinkLibrary();
+  lib.push({ id: uid(), name, terms: [] });
+  saveLinkLibrary(lib);
+  closeModal('m-add-folder');
+  set('f-folder-name', '');
+  renderLinkLibrary();
+  toast('Folder created');
+}
+
+function deleteFolder(id) {
+  if (!confirm('Delete this folder and all its terms?')) return;
+  const lib = loadLinkLibrary().filter(f => f.id !== id);
+  saveLinkLibrary(lib);
+  renderLinkLibrary();
+  toast('Folder deleted');
+}
+
+function openAddTerm(folderId) {
+  set('f-term-folder-id', folderId);
+  set('f-term-name', '');
+  openModal('m-add-term');
+}
+
+function addTerm() {
+  const folderId = v('f-term-folder-id');
+  const term = v('f-term-name');
+  if (!term) { toast('Enter a term'); return; }
+  const lib = loadLinkLibrary();
+  const folder = lib.find(f => f.id === folderId);
+  if (!folder) return;
+  if (folder.terms.some(t => t.term.toLowerCase() === term.toLowerCase())) {
+    toast('Term already exists in this folder'); return;
+  }
+  folder.terms.push({ id: uid(), term });
+  saveLinkLibrary(lib);
+  closeModal('m-add-term');
+  renderLinkLibrary();
+  // re-open the folder so they can see what they added
+  setTimeout(() => {
+    const el = document.getElementById('libf-' + folderId);
+    if (el && !el.classList.contains('open')) el.classList.add('open');
+  }, 50);
+  toast('Term added');
+}
+
+function deleteTerm(folderId, termId) {
+  const lib = loadLinkLibrary();
+  const folder = lib.find(f => f.id === folderId);
+  if (folder) folder.terms = folder.terms.filter(t => t.id !== termId);
+  saveLinkLibrary(lib);
+  renderLinkLibrary();
+  toast('Term removed');
+}
+
+function openAddFlaggedTerm(term) {
+  const lib = loadLinkLibrary();
+  if (!lib.length) {
+    toast('Add a folder in Settings first'); gotoTab('settings'); return;
+  }
+  set('f-flagged-term', term);
+  document.getElementById('f-flagged-term-display').value = term;
+  const sel = document.getElementById('f-flagged-folder');
+  sel.innerHTML = lib.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  openModal('m-add-flagged');
+}
+
+function confirmAddFlaggedTerm() {
+  const term = v('f-flagged-term');
+  const folderId = document.getElementById('f-flagged-folder').value;
+  if (!term || !folderId) return;
+  const lib = loadLinkLibrary();
+  const folder = lib.find(f => f.id === folderId);
+  if (!folder) return;
+  if (folder.terms.some(t => t.term.toLowerCase() === term.toLowerCase())) {
+    toast('Already in library'); closeModal('m-add-flagged'); return;
+  }
+  folder.terms.push({ id: uid(), term });
+  saveLinkLibrary(lib);
+  closeModal('m-add-flagged');
+  toast(`"${term}" added to ${folder.name}`);
+  // visually mark it as added in the flagged list
+  document.querySelectorAll('.flag-row').forEach(row => {
+    if (row.dataset.term === term) {
+      row.innerHTML = `<span class="flag-term">${esc(term)}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green)">✓ Added</span>`;
+    }
+  });
+}
+
+// ── NOTE CLEANER ───────────────────────────────────────
+let ncAttachments = [];
+
+function renderCleaner() {
+  const sel = document.getElementById('nc-lesson');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— choose a lesson —</option>';
+  data.forEach(p => {
+    (p.lessons||[]).forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = p.name + ' › ' + l.name;
+      sel.appendChild(opt);
+    });
+  });
+  sel.value = cur;
+  document.getElementById('nc-output').style.display = 'none';
+  document.getElementById('nc-saved-raw').style.display = 'none';
+}
+
+function onLessonSelect() {
+  const id = document.getElementById('nc-lesson').value;
+  if (!id) { document.getElementById('nc-saved-raw').style.display = 'none'; return; }
+  let found = null;
+  data.forEach(p => (p.lessons||[]).forEach(l => { if (l.id === id && l.rawNotes) found = l.rawNotes; }));
+  if (found) {
+    document.getElementById('nc-saved-raw').style.display = 'block';
+    document.getElementById('nc-saved-raw-text').textContent = found;
+  } else {
+    document.getElementById('nc-saved-raw').style.display = 'none';
+  }
+}
+
+function loadRawIntoEditor() {
+  const id = document.getElementById('nc-lesson').value;
+  let found = null;
+  data.forEach(p => (p.lessons||[]).forEach(l => { if (l.id === id && l.rawNotes) found = l.rawNotes; }));
+  if (found) document.getElementById('nc-raw').value = found;
+}
+
+function handleAttachments(input) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      ncAttachments.push({ name: file.name, dataUrl: e.target.result, file });
+      renderAttachmentList();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderAttachmentList() {
+  const list = document.getElementById('nc-attach-list');
+  const count = document.getElementById('nc-attach-count');
+  count.textContent = ncAttachments.length ? ncAttachments.length + ' image' + (ncAttachments.length!==1?'s':'') + ' attached' : '';
+  if (!ncAttachments.length) { list.innerHTML = ''; return; }
+  list.innerHTML = ncAttachments.map((a,i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">📎 ${i+1} — ${esc(a.name)}</span>
+      <button class="btn btn-danger btn-xs" onclick="removeAttachment(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeAttachment(i) {
+  ncAttachments.splice(i, 1);
+  renderAttachmentList();
+}
+
+async function saveRawNotes() {
+  const id = document.getElementById('nc-lesson').value;
+  const raw = document.getElementById('nc-raw').value.trim();
+  if (!id) { toast('Select a lesson first'); return; }
+  if (!raw) { toast('No notes to save'); return; }
+  data.forEach(p => (p.lessons||[]).forEach(l => { if (l.id === id) l.rawNotes = raw; }));
+  await save();
+  toast('Raw notes saved');
+  onLessonSelect();
+}
+
+async function structureNotes() {
+  const id = document.getElementById('nc-lesson').value;
+  const raw = document.getElementById('nc-raw').value.trim();
+  const apiKey = localStorage.getItem('btj_api_key');
+  if (!id) { toast('Select a lesson first'); return; }
+  if (!raw) { toast('Paste your notes first'); return; }
+  if (!apiKey) { toast('Add your Claude API key in Settings first'); gotoTab('settings'); return; }
+
+  let lessonName = '', playlistName = '';
+  data.forEach(p => (p.lessons||[]).forEach(l => { if (l.id === id) { lessonName = l.name; playlistName = p.name; } }));
+
+  const btn = document.getElementById('nc-structure-btn');
+  btn.disabled = true; btn.textContent = '✦ Structuring...';
+
+  // Build link library context for the prompt
+  const lib = loadLinkLibrary();
+  let linkLibraryText = 'None defined.';
+  if (lib.length) {
+    linkLibraryText = lib.map(folder => {
+      const terms = (folder.terms || []).map(t => t.term).join(', ');
+      return `Folder "${folder.name}": ${terms || '(no terms yet)'}`;
+    }).join('\n');
+  }
+
+  // Build user content array (text + optional images)
+  const userContent = [];
+  if (ncAttachments.length) {
+    ncAttachments.forEach((a, i) => {
+      userContent.push({ type: 'text', text: `[Attachment ${i+1}: ${a.name}]` });
+      userContent.push({ type: 'image', source: { type: 'base64', media_type: a.file.type, data: a.dataUrl.split(',')[1] } });
+    });
+  }
+
+  const prompt = `You are structuring raw notes from a video lesson. Follow all instructions exactly and return your response in the exact format specified.
+
+LESSON: "${lessonName}" (playlist: "${playlistName}")
+
+KNOWN OBSIDIAN LINKS:
+${linkLibraryText}
+
+INSTRUCTIONS:
+1. Structure the raw notes into clean, readable markdown
+2. For any concept that matches a known Obsidian link term above, format it as [[term]] — exact match, case-insensitive. Apply this anywhere the term naturally appears.
+3. Fix all spelling mistakes silently within the notes
+4. Identify concepts or terms that appear significant in these notes but are NOT in the known links list — these might be worth adding as Obsidian links
+5. Write a short summary of what these notes cover and why they're useful to study
+6. If there were image attachments, reference them at the end in an ## Attachments section listing each one and where it should go in an Obsidian vault
+
+Return your response in EXACTLY this format — no text before or after, no markdown outside the sections:
+
+===SUMMARY===
+[2-3 sentences: what these notes cover and why they're useful to study]
+
+===SPELLING===
+[Each correction on its own line as: original → corrected. If no corrections, write: none]
+
+===FLAGGED===
+[Comma-separated new terms worth adding as Obsidian links. If none, write: none]
+
+===NOTES===
+[Full structured markdown notes here, starting with # ${lessonName}]
+
+Raw notes:
+${raw}`;
+
+  userContent.push({ type: 'text', text: prompt });
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-client-side-keys-allowed': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 6000,
+        messages: [{ role: 'user', content: userContent }]
+      })
+    });
+    const result = await res.json();
+    if (result.error) throw new Error(result.error.message);
+    const fullText = result.content[0].text;
+
+    // Parse structured response
+    const summaryMatch = fullText.match(/===SUMMARY===\n([\s\S]*?)(?=\n===)/);
+    const spellingMatch = fullText.match(/===SPELLING===\n([\s\S]*?)(?=\n===)/);
+    const flaggedMatch  = fullText.match(/===FLAGGED===\n([\s\S]*?)(?=\n===)/);
+    const notesMatch    = fullText.match(/===NOTES===\n([\s\S]*)$/);
+
+    const summary   = summaryMatch ? summaryMatch[1].trim() : '';
+    const spellingRaw = spellingMatch ? spellingMatch[1].trim() : '';
+    const flaggedRaw  = flaggedMatch  ? flaggedMatch[1].trim()  : '';
+    const structured  = notesMatch   ? notesMatch[1].trim()    : fullText;
+
+    // Save structured notes
+    data.forEach(p => (p.lessons||[]).forEach(l => { if (l.id === id) l.structuredNotes = structured; }));
+    await save();
+
+    // Show output container
+    document.getElementById('nc-output').style.display = 'block';
+
+    // Summary
+    if (summary) {
+      document.getElementById('nc-summary-text').textContent = summary;
+      document.getElementById('nc-summary-section').style.display = 'block';
+    } else {
+      document.getElementById('nc-summary-section').style.display = 'none';
+    }
+
+    // Spelling corrections
+    const spellingLines = spellingRaw && spellingRaw.toLowerCase() !== 'none'
+      ? spellingRaw.split('\n').map(l => l.trim()).filter(l => l.includes('→'))
+      : [];
+    if (spellingLines.length) {
+      document.getElementById('nc-spelling-list').innerHTML = spellingLines.map(line => {
+        const parts = line.split('→').map(s => s.trim());
+        return `<div class="spell-row">
+          <span class="spell-original">${esc(parts[0])}</span>
+          <span class="spell-arrow">→</span>
+          <span class="spell-corrected">${esc(parts[1] || '')}</span>
+        </div>`;
+      }).join('');
+      document.getElementById('nc-spelling-section').style.display = 'block';
+    } else {
+      document.getElementById('nc-spelling-section').style.display = 'none';
+    }
+
+    // Flagged new terms
+    const flaggedTerms = flaggedRaw && flaggedRaw.toLowerCase() !== 'none'
+      ? flaggedRaw.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+    if (flaggedTerms.length) {
+      document.getElementById('nc-flagged-list').innerHTML = flaggedTerms.map(term => `
+        <div class="flag-row" data-term="${esc(term)}">
+          <span class="flag-term">${esc(term)}</span>
+          <button class="btn btn-ghost btn-xs" onclick="openAddFlaggedTerm('${esc(term)}')">+ Add to Library</button>
+        </div>`).join('');
+      document.getElementById('nc-flagged-section').style.display = 'block';
+    } else {
+      document.getElementById('nc-flagged-section').style.display = 'none';
+    }
+
+    // Structured notes
+    document.getElementById('nc-result').textContent = structured;
+
+    // Attachments export
+    if (ncAttachments.length) {
+      const expList = document.getElementById('nc-attach-export-list');
+      expList.innerHTML = ncAttachments.map((a,i) => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
+          📎 ${i+1} — <strong style="color:var(--text)">${esc(a.name)}</strong><br>
+          <span style="color:var(--accent)">→ Add to your Obsidian vault attachments folder</span>
+        </div>`).join('');
+      document.getElementById('nc-attachments-export').style.display = 'block';
+    }
+
+    toast('Notes structured ✓');
+  } catch(e) {
+    toast('⚠️ Claude API error — check your key in Settings');
+    console.error(e);
+  }
+
+  btn.disabled = false; btn.textContent = '✦ Structure with Claude';
+}
+
+function downloadMD() {
+  const id = document.getElementById('nc-lesson').value;
+  let lessonName = 'notes';
+  data.forEach(p => (p.lessons||[]).forEach(l => { if (l.id === id) lessonName = l.name; }));
+  const text = document.getElementById('nc-result').textContent;
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = lessonName.replace(/[^a-z0-9]/gi,'_') + '.md';
+  a.click();
+}
+
+// ── INIT ───────────────────────────────────────────────
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    document.getElementById('login-screen').classList.add('hidden');
+    await loadFromCloud();
+    renderDash();
+  }
+})();
+</script>
+</body>
+</html>
